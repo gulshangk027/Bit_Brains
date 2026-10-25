@@ -1,0 +1,197 @@
+{
+  "full_feature": {
+    "active_model_name": "Drishthi Calibrated XGBOOST Classifier",
+    "model_version": "DRISHTHI-CALIBRATED-XGBOOST-v1",
+    "mode": "full_feature",
+    "model_type": "xgboost",
+    "feature_count": 5,
+    "dataset_rows": 241973,
+    "dataset_name": "MuleNet_Training_Data_v3.csv",
+    "last_trained_at": "2026-10-25 21:00:40",
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "false_positive_rate": 0.0,
+    "probability_distribution": {
+      "min_probability": 0.0,
+      "max_probability": 0.9999,
+      "mean_probability": 0.27,
+      "median_probability": 0.0,
+      "percentile_10": 0.0,
+      "percentile_25": 0.0,
+      "percentile_50": 0.0,
+      "percentile_75": 0.9999,
+      "percentile_90": 0.9999,
+      "risk_tier_counts": {
+        "low": 176649,
+        "medium": 0,
+        "high": 0,
+        "critical": 65324
+      }
+    },
+    "confusion_matrix": {
+      "tp": 65324,
+      "fp": 0,
+      "tn": 176649,
+      "fn": 0
+    },
+    "roc_curve": [
+      {
+        "fpr": 0.0,
+        "tpr": 0.0
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.745
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.78
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.811
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.835
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.857
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.874
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.901
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.923
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.939
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.957
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.977
+      },
+      {
+        "fpr": 0.0,
+        "tpr": 0.995
+      },
+      {
+        "fpr": 0.005,
+        "tpr": 1.0
+      },
+      {
+        "fpr": 0.011,
+        "tpr": 1.0
+      },
+      {
+        "fpr": 0.017,
+        "tpr": 1.0
+      },
+      {
+        "fpr": 0.023,
+        "tpr": 1.0
+      },
+      {
+        "fpr": 0.03,
+        "tpr": 1.0
+      },
+      {
+        "fpr": 0.041,
+        "tpr": 1.0
+      },
+      {
+        "fpr": 1.0,
+        "tpr": 1.0
+      }
+    ],
+    "top_features": [
+      {
+        "feature_id": "Drain_Ratio",
+        "variable_name": "Drain_Ratio",
+        "description": "Engineered Behavioral Signal Drain_Ratio",
+        "is_bank_finalized": false,
+        "importance": 0.7551
+      },
+      {
+        "feature_id": "Total_Outflow",
+        "variable_name": "Total_Outflow",
+        "description": "Engineered Behavioral Signal Total_Outflow",
+        "is_bank_finalized": false,
+        "importance": 0.1719
+      },
+      {
+        "feature_id": "Txn_Count",
+        "variable_name": "Txn_Count",
+        "description": "Engineered Behavioral Signal Txn_Count",
+        "is_bank_finalized": false,
+        "importance": 0.0423
+      },
+      {
+        "feature_id": "Total_Inflow",
+        "variable_name": "Total_Inflow",
+        "description": "Engineered Behavioral Signal Total_Inflow",
+        "is_bank_finalized": false,
+        "importance": 0.0307
+      },
+      {
+        "feature_id": "Ac_No",
+        "variable_name": "Ac_No",
+        "description": "Engineered Behavioral Signal Ac_No",
+        "is_bank_finalized": false,
+        "importance": 0.0
+      }
+    ],
+    "all_feature_importance": [
+      {
+        "feature_id": "Drain_Ratio",
+        "variable_name": "Drain_Ratio",
+        "description": "Engineered Behavioral Signal Drain_Ratio",
+        "is_bank_finalized": false,
+        "importance": 0.7551
+      },
+      {
+        "feature_id": "Total_Outflow",
+        "variable_name": "Total_Outflow",
+        "description": "Engineered Behavioral Signal Total_Outflow",
+        "is_bank_finalized": false,
+        "importance": 0.1719
+      },
+      {
+        "feature_id": "Txn_Count",
+        "variable_name": "Txn_Count",
+        "description": "Engineered Behavioral Signal Txn_Count",
+        "is_bank_finalized": false,
+        "importance": 0.0423
+      },
+      {
+        "feature_id": "Total_Inflow",
+        "variable_name": "Total_Inflow",
+        "description": "Engineered Behavioral Signal Total_Inflow",
+        "is_bank_finalized": false,
+        "importance": 0.0307
+      },
+      {
+        "feature_id": "Ac_No",
+        "variable_name": "Ac_No",
+        "description": "Engineered Behavioral Signal Ac_No",
+        "is_bank_finalized": false,
+        "importance": 0.0
+      }
+    ]
+  }
+}
