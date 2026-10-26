@@ -5,11 +5,13 @@ Tagline: PREVENT. DETECT. RESPOND.
 """
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Body, status, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import logging
+import os
 import pandas as pd
 from datetime import datetime
 
@@ -101,8 +103,13 @@ class AlertStatusUpdateRequest(BaseModel):
 
 # --- Core Platform Endpoints ---
 
+FRONTEND_DIST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../frontend/dist"))
+
 @app.get("/")
 def root():
+    index_file = os.path.join(FRONTEND_DIST_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
     return {
         "platform": "MuleNet AI",
         "tagline": "PREVENT. DETECT. RESPOND.",
@@ -112,6 +119,24 @@ def root():
         "modules": ["RAKSHAK (Prevent)", "DRISHTHI (Detect)", "AWAAZ (Respond)"],
         "target_variable": TARGET_VARIABLE,
         "target_name": TARGET_NAME
+    }
+
+@app.get("/api/health")
+@app.get("/api")
+def api_health():
+    """Health check endpoint confirming backend status, active models, and dataset metadata."""
+    meta = get_dataset_metadata()
+    return {
+        "platform": "MuleNet AI",
+        "status": "ONLINE",
+        "timestamp": datetime.now().isoformat(),
+        "backend": "FastAPI (Port 8000)",
+        "dataset": meta.get("filename", "Synthetic Demonstration Data"),
+        "records": meta.get("rows", 0),
+        "target_variable": TARGET_VARIABLE,
+        "target_name": TARGET_NAME,
+        "active_mode": _ACTIVE_MODE,
+        "models_loaded": list(_TRAINED_MODELS.keys())
     }
 
 @app.post("/api/dataset/upload")
@@ -778,3 +803,28 @@ Classification: {acc_res['classification']} | Model Confidence: {round(acc_res['
         "markdown_report": report_md,
         "report_markdown": report_md
     }
+
+# --- Static File Serving & SPA Fallback for Unified Full-Stack Hosting ---
+if os.path.exists(FRONTEND_DIST_DIR):
+    assets_dir = os.path.join(FRONTEND_DIST_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    for static_asset in ["favicon.svg", "icons.svg"]:
+        asset_file = os.path.join(FRONTEND_DIST_DIR, static_asset)
+        if os.path.exists(asset_file):
+            def make_asset_endpoint(f_path=asset_file):
+                return FileResponse(f_path)
+            app.add_api_route(f"/{static_asset}", make_asset_endpoint, methods=["GET"])
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_fallback(full_path: str):
+        # Do not catch API or documentation routes
+        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            raise HTTPException(status_code=404, detail="Not Found")
+            
+        candidate_file = os.path.join(FRONTEND_DIST_DIR, full_path)
+        if os.path.isfile(candidate_file):
+            return FileResponse(candidate_file)
+        return FileResponse(os.path.join(FRONTEND_DIST_DIR, "index.html"))
+

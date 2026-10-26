@@ -26,6 +26,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   BarChart, Bar, Cell 
 } from 'recharts';
+import { getApiUrl, API_BASE_URL } from '../config/api';
 
 export default function SettingsView({
   datasetSummary,
@@ -76,7 +77,7 @@ export default function SettingsView({
 
   const fetchModelStatus = async () => {
     try {
-      const res = await fetch('/api/model/status');
+      const res = await fetch(getApiUrl('/api/model/status'));
       const data = await res.json();
       setModelStatus(data);
       if (data.active_mode) setFeatureMode(data.active_mode);
@@ -93,7 +94,7 @@ export default function SettingsView({
   const fetchFeatureDict = async () => {
     setLoadingDict(true);
     try {
-      const res = await fetch('/api/features/dictionary');
+      const res = await fetch(getApiUrl('/api/features/dictionary'));
       const data = await res.json();
       setFeatureDict(data.dictionary || []);
     } catch (err) {
@@ -116,7 +117,7 @@ export default function SettingsView({
     setTrainingLoading(true);
     setActionNotice(null);
     try {
-      const res = await fetch('/api/model/train', {
+      const res = await fetch(getApiUrl('/api/model/train'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: featureMode, model_type: modelType })
@@ -142,7 +143,7 @@ export default function SettingsView({
     setActivationLoading(true);
     setActionNotice(null);
     try {
-      const res = await fetch('/api/model/activate', {
+      const res = await fetch(getApiUrl('/api/model/activate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: featureMode, model_type: modelType })
@@ -179,7 +180,7 @@ export default function SettingsView({
       return {
         ok: false,
         status: res.status,
-        message: `Server returned an empty response (HTTP ${res.status} ${res.statusText || ''}). Verify the backend server is running on http://127.0.0.1:8000.`
+        message: `Server returned an empty response (HTTP ${res.status} ${res.statusText || ''}). Verify the backend server is running on ${API_BASE_URL || 'http://localhost:8000'}.`
       };
     }
 
@@ -226,7 +227,7 @@ export default function SettingsView({
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/dataset/upload', {
+      const res = await fetch(getApiUrl('/api/dataset/upload'), {
         method: 'POST',
         body: formData
       });
@@ -265,7 +266,7 @@ export default function SettingsView({
   const fetchCustomPrediction = async (values = demoValues) => {
     setCustomMlLoading(true);
     try {
-      const res = await fetch('/api/predict/custom', {
+      const res = await fetch(getApiUrl('/api/predict/custom'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ features: values, mode: featureMode })

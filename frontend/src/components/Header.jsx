@@ -11,9 +11,11 @@ import {
   AlertTriangle,
   FileSpreadsheet
 } from 'lucide-react';
+import { getApiUrl, API_BASE_URL } from '../config/api';
 
 export default function Header({ 
   datasetSummary, 
+  backendConnected,
   onRefreshDataset, 
   isModelTrained, 
   setIsModelTrained,
@@ -31,7 +33,7 @@ export default function Header({
     }
 
     if (!rawText || !rawText.trim()) {
-      return { ok: false, status: res.status, message: `Server returned an empty response (HTTP ${res.status}). Verify backend is running.` };
+      return { ok: false, status: res.status, message: `Server returned an empty response (HTTP ${res.status}). Verify backend is running on ${API_BASE_URL || 'http://localhost:8000'}.` };
     }
 
     let data = null;
@@ -66,7 +68,7 @@ export default function Header({
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/dataset/upload', {
+      const res = await fetch(getApiUrl('/api/dataset/upload'), {
         method: 'POST',
         body: formData
       });
@@ -95,10 +97,21 @@ export default function Header({
       {/* Left Status Indicators */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {/* Engine Status */}
-        <div className="flex items-center gap-1.5 bg-[#E6F4EA] px-3 py-1.5 rounded-lg border border-[#A8DADC] text-[#168A5B] font-bold">
-          <span className="w-2 h-2 rounded-full bg-[#168A5B] animate-pulse"></span>
-          <span>AI Engine: Online</span>
-        </div>
+        {backendConnected ? (
+          <div className="flex items-center gap-1.5 bg-[#E6F4EA] px-3 py-1.5 rounded-lg border border-[#A8DADC] text-[#168A5B] font-bold">
+            <span className="w-2 h-2 rounded-full bg-[#168A5B] animate-pulse"></span>
+            <span>AI Backend: Connected</span>
+          </div>
+        ) : (
+          <button 
+            onClick={() => onRefreshDataset && onRefreshDataset()}
+            className="flex items-center gap-1.5 bg-[#FEF2F2] hover:bg-[#FEE2E2] px-3 py-1.5 rounded-lg border border-[#F87171] text-[#D64545] font-bold transition cursor-pointer"
+            title={`Backend unreachable. Click to retry connection to ${API_BASE_URL || 'http://localhost:8000'}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#D64545] animate-ping"></span>
+            <span>Backend: Disconnected (Retry)</span>
+          </button>
+        )}
 
         {/* Dataset Status */}
         <div className="flex items-center gap-1.5 bg-[#F6F9FC] px-3 py-1.5 rounded-lg border border-[#DCE5EF] text-[#102B52] font-semibold">

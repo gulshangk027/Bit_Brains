@@ -16,6 +16,7 @@ import {
   Eye
 } from 'lucide-react';
 import { generateInvestigationReportPDF } from '../utils/pdfGenerator';
+import { getApiUrl } from '../config/api';
 
 /**
  * React Error Boundary to prevent component crashes from turning the page blank.
@@ -94,7 +95,7 @@ function ReportsViewContent({ initialAccount }) {
     setAccountId(targetId);
 
     try {
-      const res = await fetch('/api/report', {
+      const res = await fetch(getApiUrl('/api/report'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ account_id: targetId, mode: 'full_feature' })

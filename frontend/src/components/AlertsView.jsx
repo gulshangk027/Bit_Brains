@@ -12,6 +12,7 @@ import {
   RefreshCw,
   FileText
 } from 'lucide-react';
+import { getApiUrl } from '../config/api';
 
 export default function AlertsView({ alerts: parentAlerts, onNavigateToAccount, onRefreshAlerts }) {
   const [localAlerts, setLocalAlerts] = useState([]);
@@ -30,7 +31,7 @@ export default function AlertsView({ alerts: parentAlerts, onNavigateToAccount, 
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/alerts');
+      const res = await fetch(getApiUrl('/api/alerts'));
       const data = await res.json();
       setLocalAlerts(data.alerts || []);
     } catch (err) {
@@ -49,7 +50,7 @@ export default function AlertsView({ alerts: parentAlerts, onNavigateToAccount, 
   const handleStatusChange = async (alertId, newStatus) => {
     setUpdatingAlertId(alertId);
     try {
-      const res = await fetch(`/api/alerts/${alertId}/status`, {
+      const res = await fetch(getApiUrl(`/api/alerts/${alertId}/status`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, notes: `Status updated by investigator to ${newStatus}` })

@@ -15,6 +15,7 @@ import {
   Target
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { getApiUrl } from '../config/api';
 
 export default function AnalyticsView() {
   const [data, setData] = useState(null);
@@ -25,7 +26,7 @@ export default function AnalyticsView() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/analytics/overview');
+      const res = await fetch(getApiUrl('/api/analytics/overview'));
       if (!res.ok) throw new Error('Failed to fetch analytics overview');
       const json = await res.json();
       setData(json);

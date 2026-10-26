@@ -11,6 +11,7 @@ import AnalyticsView from './components/AnalyticsView';
 import ReportsView from './components/ReportsView';
 import DictionaryView from './components/DictionaryView';
 import SettingsView from './components/SettingsView';
+import { getApiUrl } from './config/api';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('overview');
@@ -21,20 +22,27 @@ export default function App() {
   const [noticeMessage, setNoticeMessage] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [selectedAccountNav, setSelectedAccountNav] = useState(null);
+  const [backendConnected, setBackendConnected] = useState(false);
 
   const fetchDatasetSummary = async () => {
     try {
-      const res = await fetch('/api/dataset/summary');
-      const data = await res.json();
-      setDatasetSummary(data);
+      const res = await fetch(getApiUrl('/api/dataset/summary'));
+      if (res.ok) {
+        const data = await res.json();
+        setDatasetSummary(data);
+        setBackendConnected(true);
+      } else {
+        setBackendConnected(false);
+      }
     } catch (err) {
       console.error('Failed to fetch dataset summary:', err);
+      setBackendConnected(false);
     }
   };
 
   const checkModelStatus = async () => {
     try {
-      const res = await fetch('/api/model/status');
+      const res = await fetch(getApiUrl('/api/model/status'));
       const data = await res.json();
       if (data.is_trained) {
         setIsModelTrained(true);
@@ -47,7 +55,7 @@ export default function App() {
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch('/api/alerts');
+      const res = await fetch(getApiUrl('/api/alerts'));
       const data = await res.json();
       setAlerts(data.alerts || []);
     } catch (err) {
@@ -74,7 +82,7 @@ export default function App() {
     } else {
       if (!isModelTrained) {
         try {
-          const res = await fetch('/api/model/status');
+          const res = await fetch(getApiUrl('/api/model/status'));
           const data = await res.json();
           if (data.is_trained) {
             setIsModelTrained(true);
@@ -116,7 +124,10 @@ export default function App() {
           isMlMode={isMlMode}
           isModelTrained={isModelTrained}
           datasetSummary={datasetSummary}
+          backendConnected={backendConnected}
+          onRefreshDataset={handleGlobalRefresh}
           onUploadClick={() => setCurrentView('settings')}
+          onNavigateToSettings={() => setCurrentView('settings')}
           onDemoModeToggle={handleToggleMlMode}
           noticeMessage={noticeMessage}
         />

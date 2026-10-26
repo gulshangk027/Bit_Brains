@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 
 import VoiceInputButton from './VoiceInputButton';
+import { getApiUrl, API_BASE_URL } from '../config/api';
+import { analyzeRakshakClient } from '../utils/rakshakEngine';
 
 const SAMPLE_MESSAGES = [
   {
@@ -40,6 +42,7 @@ export default function RakshakView() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDemo, setSelectedDemo] = useState(null);
+  const [engineSource, setEngineSource] = useState('live'); // 'live' or 'offline'
   const activeRequestIdRef = useRef(0);
 
   // Check if current input differs from the evaluated message
@@ -64,7 +67,7 @@ export default function RakshakView() {
     const currentRequestId = ++activeRequestIdRef.current;
 
     try {
-      const response = await fetch('/api/rakshak/analyze', {
+      const response = await fetch(getApiUrl('/api/rakshak/analyze'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -82,11 +85,26 @@ export default function RakshakView() {
       if (currentRequestId === activeRequestIdRef.current) {
         setAnalysis(resData);
         setEvaluatedMessage(textToAnalyze);
+        setEngineSource('live');
+        setError(null);
       }
     } catch (err) {
-      console.error('Rakshak analysis error:', err);
-      if (currentRequestId === activeRequestIdRef.current) {
-        setError('Failed to evaluate message against Rakshak API. Please verify backend connection.');
+      console.warn('Live Rakshak API unavailable, activating client pattern engine:', err?.message || err);
+      
+      // Execute resilient client-side pattern evaluation so the user experience is never blocked
+      try {
+        const fallbackResult = analyzeRakshakClient(textToAnalyze);
+        if (currentRequestId === activeRequestIdRef.current) {
+          setAnalysis(fallbackResult);
+          setEvaluatedMessage(textToAnalyze);
+          setEngineSource('offline');
+          setError(null);
+        }
+      } catch (fallbackErr) {
+        console.error('Rakshak analysis error:', fallbackErr);
+        if (currentRequestId === activeRequestIdRef.current) {
+          setError(`Analysis failed: ${err.message || 'Please check backend connection.'}`);
+        }
       }
     } finally {
       if (currentRequestId === activeRequestIdRef.current) {
@@ -296,8 +314,31 @@ export default function RakshakView() {
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   RAKSHAK EVALUATION COMPLETE
                 </span>
-                <span className="text-[10px] text-[#7A8896] font-mono font-semibold">ENGINE: V2.4-EVIDENCE</span>
+                <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${
+                  engineSource === 'live' 
+                    ? 'bg-[#E6F4EA] text-[#168A5B] border-[#A8DADC]' 
+                    : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                }`}>
+                  {engineSource === 'live' ? 'ENGINE: LIVE FASTAPI' : 'ENGINE: CLIENT PATTERNS'}
+                </span>
               </div>
+
+              {/* Offline notice when backend is offline */}
+              {engineSource === 'offline' && (
+                <div className="p-2.5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-[11px] text-[#92400E] flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-[#D98B00] shrink-0" />
+                    <span>Live backend at <code className="font-mono font-bold">{API_BASE_URL || 'http://localhost:8000'}</code> was unreachable. Showing client-side threat analysis.</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={handleAnalyze} 
+                    className="shrink-0 text-[10px] font-bold text-[#1565C0] hover:underline cursor-pointer bg-white px-2 py-0.5 rounded border border-[#D9E2EC]"
+                  >
+                    Retry Live API
+                  </button>
+                </div>
+              )}
 
               {/* Evaluated Message Snippet */}
               <div className="p-3 rounded-xl bg-[#F5F7FA] border border-[#D9E2EC] space-y-1">

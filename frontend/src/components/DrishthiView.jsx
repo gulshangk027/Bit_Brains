@@ -24,6 +24,7 @@ import {
   GitFork,
   ChevronRight
 } from 'lucide-react';
+import { getApiUrl } from '../config/api';
 
 export default function DrishthiView({ initialAccount, onNavigate, onSelectAccount }) {
   const getInitialTargetId = () => {
@@ -63,7 +64,7 @@ export default function DrishthiView({ initialAccount, onNavigate, onSelectAccou
   const fetchTimeline = async (id, dir = 'ALL') => {
     setTimelineLoading(true);
     try {
-      const res = await fetch(`/api/transactions/${id}?direction=${dir}&limit=100`);
+      const res = await fetch(getApiUrl(`/api/transactions/${id}?direction=${dir}&limit=100`));
       const data = await res.json();
       setTimelineData(data);
     } catch (err) {
@@ -76,7 +77,7 @@ export default function DrishthiView({ initialAccount, onNavigate, onSelectAccou
   const fetchComplaints = async (id) => {
     setComplaintsLoading(true);
     try {
-      const res = await fetch(`/api/complaints/${id}`);
+      const res = await fetch(getApiUrl(`/api/complaints/${id}`));
       const data = await res.json();
       setComplaintsData(data);
     } catch (err) {
@@ -90,7 +91,7 @@ export default function DrishthiView({ initialAccount, onNavigate, onSelectAccou
     if (!src || !dst) return;
     setTrailLoading(true);
     try {
-      const res = await fetch('/api/money-trail', {
+      const res = await fetch(getApiUrl('/api/money-trail'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -117,7 +118,7 @@ export default function DrishthiView({ initialAccount, onNavigate, onSelectAccou
     setTrailSource(targetId);
 
     try {
-      const res = await fetch(`/api/accounts/${targetId}?mode=full_feature`);
+      const res = await fetch(getApiUrl(`/api/accounts/${targetId}?mode=full_feature`));
       const data = await res.json();
       setAccountData(data);
 

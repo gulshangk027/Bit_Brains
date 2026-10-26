@@ -23,6 +23,8 @@ import {
 
 import VoiceInputButton from './VoiceInputButton';
 import { generateAwaazPDF } from '../utils/pdfGenerator';
+import { getApiUrl } from '../config/api';
+import { analyzeAwaazClient } from '../utils/awaazEngine';
 
 const SAMPLE_INCIDENTS = [
   {
@@ -62,16 +64,24 @@ export default function AwaazView() {
     setLoading(true);
     setRegisteredData(null);
     try {
-      const res = await fetch('/api/awaaz/analyze', {
+      const res = await fetch(getApiUrl('/api/awaaz/analyze'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ incident_text: textToAnalyze })
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setResult(data);
       setEditedDraft(data.complaint_draft);
     } catch (err) {
-      console.error('Awaaz error:', err);
+      console.warn('Live Awaaz backend unreachable, activating client incident analyzer:', err?.message || err);
+      try {
+        const fallbackData = analyzeAwaazClient(textToAnalyze);
+        setResult(fallbackData);
+        setEditedDraft(fallbackData.complaint_draft);
+      } catch (clientErr) {
+        console.error('Awaaz client error:', clientErr);
+      }
     } finally {
       setLoading(false);
     }
@@ -102,7 +112,7 @@ export default function AwaazView() {
         evidence_type: "AWAAZ AI Incident Statement & Complaint Record"
       };
 
-      const res = await fetch('/api/complaints', {
+      const res = await fetch(getApiUrl('/api/complaints'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

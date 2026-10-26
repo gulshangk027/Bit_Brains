@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Users
 } from 'lucide-react';
+import { getApiUrl } from '../config/api';
 
 export default function NetworksView({ onSelectAccount }) {
   const [networkData, setNetworkData] = useState(null);
@@ -54,7 +55,7 @@ export default function NetworksView({ onSelectAccount }) {
   const fetchNetworkGraph = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/network');
+      const res = await fetch(getApiUrl('/api/network'));
       const data = await res.json();
       setNetworkData(data);
 

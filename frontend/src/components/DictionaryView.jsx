@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Search, Lock, Filter, CheckCircle2 } from 'lucide-react';
+import { getApiUrl } from '../config/api';
 
 export default function DictionaryView() {
   const [dictionary, setDictionary] = useState([]);
@@ -8,7 +9,7 @@ export default function DictionaryView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/features/dictionary')
+    fetch(getApiUrl('/api/features/dictionary'))
       .then(res => res.json())
       .then(data => {
         setDictionary(data.dictionary || []);
