@@ -15,7 +15,10 @@ import { getApiUrl, API_BASE_URL } from '../config/api';
 
 export default function Header({ 
   datasetSummary, 
+  backendStatus = 'disconnected',
   backendConnected,
+  backendHealthDetails,
+  onRetryHealth,
   onRefreshDataset, 
   isModelTrained, 
   setIsModelTrained,
@@ -23,6 +26,9 @@ export default function Header({
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadNotice, setUploadNotice] = useState(null);
+
+  const effectiveStatus = backendStatus || (backendConnected ? 'online' : 'disconnected');
+  const resolvedBaseUrl = getApiUrl('') || 'http://localhost:8000';
 
   const safeParseApiResponse = async (res) => {
     let rawText = '';
@@ -33,7 +39,7 @@ export default function Header({
     }
 
     if (!rawText || !rawText.trim()) {
-      return { ok: false, status: res.status, message: `Server returned an empty response (HTTP ${res.status}). Verify backend is running on ${API_BASE_URL || 'http://localhost:8000'}.` };
+      return { ok: false, status: res.status, message: `Server returned an empty response (HTTP ${res.status}). Verify backend is running on ${resolvedBaseUrl}.` };
     }
 
     let data = null;
@@ -92,21 +98,55 @@ export default function Header({
     }
   };
 
+  const handleRetry = () => {
+    if (onRetryHealth) {
+      onRetryHealth();
+    } else if (onRefreshDataset) {
+      onRefreshDataset();
+    }
+  };
+
   return (
     <header className="bg-white border-b border-[#DCE5EF] px-8 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20 font-sans shadow-2xs">
       {/* Left Status Indicators */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
         {/* Engine Status */}
-        {backendConnected ? (
-          <div className="flex items-center gap-1.5 bg-[#E6F4EA] px-3 py-1.5 rounded-lg border border-[#A8DADC] text-[#168A5B] font-bold">
+        {effectiveStatus === 'online' && (
+          <div 
+            className="flex items-center gap-1.5 bg-[#E6F4EA] px-3 py-1.5 rounded-lg border border-[#A8DADC] text-[#168A5B] font-bold"
+            title={backendHealthDetails?.message || `FastAPI backend is connected and healthy at ${resolvedBaseUrl}`}
+          >
             <span className="w-2 h-2 rounded-full bg-[#168A5B] animate-pulse"></span>
-            <span>AI Backend: Connected</span>
+            <span>AI Backend: Online</span>
           </div>
-        ) : (
+        )}
+
+        {effectiveStatus === 'connecting' && (
+          <div 
+            className="flex items-center gap-1.5 bg-[#FFFBEB] px-3 py-1.5 rounded-lg border border-[#FDE68A] text-[#B45309] font-bold"
+            title={`Testing health check at ${getApiUrl('/health')}...`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#D97706] animate-spin"></span>
+            <span>Backend: Connecting...</span>
+          </div>
+        )}
+
+        {effectiveStatus === 'error' && (
           <button 
-            onClick={() => onRefreshDataset && onRefreshDataset()}
+            onClick={handleRetry}
             className="flex items-center gap-1.5 bg-[#FEF2F2] hover:bg-[#FEE2E2] px-3 py-1.5 rounded-lg border border-[#F87171] text-[#D64545] font-bold transition cursor-pointer"
-            title={`Backend unreachable. Click to retry connection to ${API_BASE_URL || 'http://localhost:8000'}`}
+            title={backendHealthDetails?.message || `Backend error. Click to retry health check to ${getApiUrl('/health')}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#D64545]"></span>
+            <span>Backend: Error (Retry)</span>
+          </button>
+        )}
+
+        {effectiveStatus === 'disconnected' && (
+          <button 
+            onClick={handleRetry}
+            className="flex items-center gap-1.5 bg-[#FEF2F2] hover:bg-[#FEE2E2] px-3 py-1.5 rounded-lg border border-[#F87171] text-[#D64545] font-bold transition cursor-pointer"
+            title={backendHealthDetails?.message || `Backend unreachable at ${resolvedBaseUrl}. Click to retry health check.`}
           >
             <span className="w-2 h-2 rounded-full bg-[#D64545] animate-ping"></span>
             <span>Backend: Disconnected (Retry)</span>

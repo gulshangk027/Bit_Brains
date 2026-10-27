@@ -26,11 +26,21 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, 
   BarChart, Bar, Cell 
 } from 'recharts';
-import { getApiUrl, API_BASE_URL } from '../config/api';
+import { 
+  getApiUrl, 
+  API_BASE_URL, 
+  getApiConfigInfo, 
+  getCustomApiUrl, 
+  setCustomApiUrl, 
+  checkBackendHealth 
+} from '../config/api';
 
 export default function SettingsView({
   datasetSummary,
   onRefreshDataset,
+  backendStatus = 'disconnected',
+  backendHealthDetails,
+  onRetryHealth,
   isModelTrained,
   setIsModelTrained,
   trainedMetrics,
@@ -45,6 +55,11 @@ export default function SettingsView({
   const [metrics, setMetrics] = useState(trainedMetrics);
   const [modelStatus, setModelStatus] = useState(null);
   const [actionNotice, setActionNotice] = useState(null);
+
+  const [apiInfo, setApiInfo] = useState(getApiConfigInfo());
+  const [customUrlInput, setCustomUrlInput] = useState(getCustomApiUrl());
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState(null);
 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -164,8 +179,41 @@ export default function SettingsView({
     }
   };
 
+  const handleTestConnection = async () => {
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+    try {
+      const res = await checkBackendHealth(6000);
+      setConnectionTestResult(res);
+      setApiInfo(getApiConfigInfo());
+      if (onRetryHealth) onRetryHealth();
+    } catch (err) {
+      setConnectionTestResult({ ok: false, status: 'error', message: err.message });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSaveCustomUrl = () => {
+    setCustomApiUrl(customUrlInput);
+    setApiInfo(getApiConfigInfo());
+    setActionNotice('API Base URL updated. Performing live health check...');
+    setTimeout(() => setActionNotice(null), 4000);
+    handleTestConnection();
+  };
+
+  const handleResetCustomUrl = () => {
+    setCustomApiUrl('');
+    setCustomUrlInput('');
+    setApiInfo(getApiConfigInfo());
+    setActionNotice('Reset to default API Base URL. Performing live health check...');
+    setTimeout(() => setActionNotice(null), 4000);
+    handleTestConnection();
+  };
+
   const safeParseApiResponse = async (res) => {
     let rawText = '';
+    const resolvedUrl = getApiUrl('') || 'http://localhost:8000';
     try {
       rawText = await res.text();
     } catch (err) {
@@ -180,7 +228,7 @@ export default function SettingsView({
       return {
         ok: false,
         status: res.status,
-        message: `Server returned an empty response (HTTP ${res.status} ${res.statusText || ''}). Verify the backend server is running on ${API_BASE_URL || 'http://localhost:8000'}.`
+        message: `Server returned an empty response (HTTP ${res.status} ${res.statusText || ''}). Verify the backend server is running on ${resolvedUrl}.`
       };
     }
 
@@ -310,6 +358,175 @@ export default function SettingsView({
           <span>{actionNotice}</span>
         </div>
       )}
+
+      {/* SECTION: Backend API Connection & Cloud Status */}
+      <div className="bg-white p-6 rounded-2xl border border-[#D9E2EC] shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#D9E2EC] pb-4 gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#EEF3F8] text-[#1565C0] border border-[#D9E2EC] uppercase">
+                PRODUCTION NETWORK & API CONNECTIVITY
+              </span>
+            </div>
+            <h3 className="text-base font-black text-[#0F2747] mt-1 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-[#1565C0]" />
+              <span>Backend Connection & Service Health</span>
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {backendStatus === 'online' && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#E6F4EA] border border-[#A8DADC] text-[#168A5B] text-xs font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#168A5B] animate-pulse"></span>
+                <span>FastAPI Service Online</span>
+              </div>
+            )}
+            {backendStatus === 'connecting' && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-[#B45309] text-xs font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] animate-spin"></span>
+                <span>Connecting / Health Check In Progress...</span>
+              </div>
+            )}
+            {backendStatus === 'error' && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#FEF2F2] border border-[#F87171] text-[#D64545] text-xs font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D64545]"></span>
+                <span>Backend Error (Check Logs)</span>
+              </div>
+            )}
+            {backendStatus === 'disconnected' && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#FEF2F2] border border-[#F87171] text-[#D64545] text-xs font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D64545] animate-ping"></span>
+                <span>Backend Disconnected</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Status Metrics Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div className="p-4 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-1">
+            <span className="text-[10px] text-[#5B6B7A] font-bold uppercase">Target Health URL</span>
+            <div className="font-mono font-bold text-[#1565C0] truncate" title={getApiUrl('/health')}>
+              {getApiUrl('/health')}
+            </div>
+          </div>
+
+          <div className="p-4 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-1">
+            <span className="text-[10px] text-[#5B6B7A] font-bold uppercase">Effective Base URL</span>
+            <div className="font-mono font-bold text-[#0F2747] truncate" title={apiInfo.effectiveUrl}>
+              {apiInfo.effectiveUrl}
+            </div>
+          </div>
+
+          <div className="p-4 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-1">
+            <span className="text-[10px] text-[#5B6B7A] font-bold uppercase">Vercel Env Var (VITE_API_URL)</span>
+            <div className="font-mono font-bold truncate text-[#5B6B7A]" title={apiInfo.envUrl || 'Not configured in Vercel'}>
+              {apiInfo.envUrl ? apiInfo.envUrl : 'Not set (defaults to relative)'}
+            </div>
+          </div>
+
+          <div className="p-4 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-1">
+            <span className="text-[10px] text-[#5B6B7A] font-bold uppercase">Environment Mode</span>
+            <div className="font-mono font-bold text-[#168A5B]">
+              {apiInfo.isDev ? 'Development (Local Host)' : 'Production Build'}
+            </div>
+          </div>
+        </div>
+
+        {/* Live Override Input & Ping Tool */}
+        <div className="p-5 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h4 className="text-xs font-bold text-[#0F2747] uppercase flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-[#1565C0]" />
+                <span>Custom API Endpoint Override (Live Debugger)</span>
+              </h4>
+              <p className="text-[11px] text-[#5B6B7A]">
+                Directly test against your deployed cloud backend (e.g. Render, Railway, Fly.io, or ngrok) without waiting for a rebuild.
+              </p>
+            </div>
+            <button
+              onClick={handleTestConnection}
+              disabled={testingConnection}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1565C0] hover:bg-[#0F2747] text-white text-xs font-bold transition cursor-pointer shrink-0 disabled:opacity-60"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${testingConnection ? 'animate-spin' : ''}`} />
+              <span>{testingConnection ? 'Pinging /health...' : 'Test Connection'}</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <input
+              type="text"
+              value={customUrlInput}
+              onChange={(e) => setCustomUrlInput(e.target.value)}
+              placeholder="https://your-backend.onrender.com (or empty to use default)"
+              className="flex-1 bg-white border border-[#D9E2EC] focus:border-[#1565C0] focus:ring-1 focus:ring-[#1565C0] rounded-lg px-3.5 py-2 text-xs font-mono text-[#0F2747] outline-none"
+            />
+            <button
+              onClick={handleSaveCustomUrl}
+              className="px-4 py-2 bg-[#0F2747] hover:bg-[#1565C0] text-white text-xs font-bold rounded-lg transition cursor-pointer"
+            >
+              Apply & Save
+            </button>
+            {customUrlInput && (
+              <button
+                onClick={handleResetCustomUrl}
+                className="px-3 py-2 bg-white hover:bg-[#FEE2E2] text-[#D64545] border border-[#F87171] text-xs font-bold rounded-lg transition cursor-pointer"
+              >
+                Reset Default
+              </button>
+            )}
+          </div>
+
+          {/* Connection Test Diagnostic Message */}
+          {connectionTestResult && (
+            <div className={`p-3 rounded-lg border text-xs flex items-start gap-2 ${
+              connectionTestResult.ok
+                ? 'bg-[#E6F4EA] border-[#A8DADC] text-[#168A5B]'
+                : 'bg-[#FEF2F2] border-[#F87171] text-[#D64545]'
+            }`}>
+              {connectionTestResult.ok ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-0.5">
+                <span className="font-bold">
+                  {connectionTestResult.ok ? 'Connection Verified: ' : 'Connection Failed: '}
+                </span>
+                <span>{connectionTestResult.message}</span>
+                {connectionTestResult.data && (
+                  <div className="text-[10px] font-mono opacity-80 pt-1">
+                    Platform: {connectionTestResult.data.platform} | Records: {connectionTestResult.data.records}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Production Deployment Instructions (Shown when disconnected) */}
+        {backendStatus !== 'online' && (
+          <div className="p-4 bg-[#EEF3F8] rounded-xl border border-[#D0DFEF] text-xs text-[#102B52] space-y-2">
+            <div className="flex items-center gap-2 font-bold text-[#1268C4]">
+              <Info className="w-4 h-4 shrink-0" />
+              <span>How to deploy your FastAPI Backend to fix Disconnection in Production</span>
+            </div>
+            <ol className="list-decimal list-inside space-y-1 text-[#5B6B7A] text-[11px] leading-relaxed">
+              <li>
+                <strong className="text-[#0F2747]">Deploy Backend:</strong> MuleNet AI's Python ML backend (FastAPI, XGBoost, SHAP) can be deployed with 1 click to <strong className="text-[#0F2747]">Render</strong>, <strong className="text-[#0F2747]">Railway</strong>, or <strong className="text-[#0F2747]">Fly.io</strong> using the included <code className="bg-white px-1.5 py-0.5 rounded border border-[#D9E2EC] font-mono text-[#1565C0]">render.yaml</code>, <code className="bg-white px-1.5 py-0.5 rounded border border-[#D9E2EC] font-mono text-[#1565C0]">backend/requirements.txt</code>, and <code className="bg-white px-1.5 py-0.5 rounded border border-[#D9E2EC] font-mono text-[#1565C0]">Procfile</code>.
+              </li>
+              <li>
+                <strong className="text-[#0F2747]">Set Vercel Environment Variable:</strong> In your Vercel Dashboard (<strong className="text-[#0F2747]">Project &gt; Settings &gt; Environment Variables</strong>), create a variable named <code className="bg-white px-1.5 py-0.5 rounded border border-[#D9E2EC] font-mono text-[#1565C0]">VITE_API_URL</code> with the URL of your deployed backend (e.g. <code className="bg-white px-1.5 py-0.5 rounded border border-[#D9E2EC] font-mono text-[#1565C0]">https://mulenet-backend.onrender.com</code>), then trigger a redeploy.
+              </li>
+              <li>
+                <strong className="text-[#0F2747]">Immediate Live Testing:</strong> Alternatively, paste your live backend URL directly into the override box above and click <strong className="text-[#0F2747]">Apply &amp; Save</strong> for instant connectivity.
+              </li>
+            </ol>
+          </div>
+        )}
+      </div>
 
       {/* SECTION 1: Configurable Decision Support Risk Thresholds */}
       <div className="bg-white p-6 rounded-2xl border border-[#D9E2EC] shadow-sm space-y-6">

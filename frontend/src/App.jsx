@@ -11,7 +11,7 @@ import AnalyticsView from './components/AnalyticsView';
 import ReportsView from './components/ReportsView';
 import DictionaryView from './components/DictionaryView';
 import SettingsView from './components/SettingsView';
-import { getApiUrl } from './config/api';
+import { getApiUrl, checkBackendHealth } from './config/api';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('overview');
@@ -22,57 +22,98 @@ export default function App() {
   const [noticeMessage, setNoticeMessage] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [selectedAccountNav, setSelectedAccountNav] = useState(null);
-  const [backendConnected, setBackendConnected] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('connecting');
+  const [backendHealthDetails, setBackendHealthDetails] = useState(null);
 
   const fetchDatasetSummary = async () => {
     try {
-      const res = await fetch(getApiUrl('/api/dataset/summary'));
-      if (res.ok) {
+      const res = await fetch(getApiUrl('/api/dataset/summary'), {
+        headers: { 'Accept': 'application/json' }
+      });
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      if (res.ok && ct.includes('application/json')) {
         const data = await res.json();
         setDatasetSummary(data);
-        setBackendConnected(true);
-      } else {
-        setBackendConnected(false);
       }
     } catch (err) {
-      console.error('Failed to fetch dataset summary:', err);
-      setBackendConnected(false);
+      console.warn('Failed to fetch dataset summary:', err);
     }
   };
 
   const checkModelStatus = async () => {
     try {
-      const res = await fetch(getApiUrl('/api/model/status'));
-      const data = await res.json();
-      if (data.is_trained) {
-        setIsModelTrained(true);
-        if (data.metrics) setTrainedMetrics(data.metrics);
+      const res = await fetch(getApiUrl('/api/model/status'), {
+        headers: { 'Accept': 'application/json' }
+      });
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      if (res.ok && ct.includes('application/json')) {
+        const data = await res.json();
+        if (data.is_trained) {
+          setIsModelTrained(true);
+          if (data.metrics) setTrainedMetrics(data.metrics);
+        }
       }
     } catch (err) {
-      console.error('Failed to check model status:', err);
+      console.warn('Failed to check model status:', err);
     }
   };
 
   const fetchAlerts = async () => {
     try {
-      const res = await fetch(getApiUrl('/api/alerts'));
-      const data = await res.json();
-      setAlerts(data.alerts || []);
+      const res = await fetch(getApiUrl('/api/alerts'), {
+        headers: { 'Accept': 'application/json' }
+      });
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      if (res.ok && ct.includes('application/json')) {
+        const data = await res.json();
+        setAlerts(data.alerts || []);
+      }
     } catch (err) {
-      console.error('Failed to fetch alerts:', err);
+      console.warn('Failed to fetch alerts:', err);
+    }
+  };
+
+  const checkHealth = async () => {
+    setBackendStatus('connecting');
+    try {
+      const health = await checkBackendHealth(6000);
+      setBackendStatus(health.status);
+      setBackendHealthDetails(health);
+
+      if (health.ok) {
+        await Promise.allSettled([
+          fetchDatasetSummary(),
+          checkModelStatus(),
+          fetchAlerts()
+        ]);
+      }
+      return health;
+    } catch (err) {
+      setBackendStatus('disconnected');
+      setBackendHealthDetails({
+        ok: false,
+        status: 'disconnected',
+        message: err.message || 'Connection failed'
+      });
+      return { ok: false, status: 'disconnected', message: err.message };
     }
   };
 
   useEffect(() => {
-    fetchDatasetSummary();
-    checkModelStatus();
-    fetchAlerts();
+    checkHealth();
+
+    const handleUrlChange = () => {
+      checkHealth();
+    };
+
+    window.addEventListener('mulenet-api-url-changed', handleUrlChange);
+    return () => {
+      window.removeEventListener('mulenet-api-url-changed', handleUrlChange);
+    };
   }, []);
 
   const handleGlobalRefresh = () => {
-    fetchDatasetSummary();
-    checkModelStatus();
-    fetchAlerts();
+    checkHealth();
   };
 
   const handleToggleMlMode = async () => {
@@ -124,7 +165,10 @@ export default function App() {
           isMlMode={isMlMode}
           isModelTrained={isModelTrained}
           datasetSummary={datasetSummary}
-          backendConnected={backendConnected}
+          backendStatus={backendStatus}
+          backendConnected={backendStatus === 'online'}
+          backendHealthDetails={backendHealthDetails}
+          onRetryHealth={checkHealth}
           onRefreshDataset={handleGlobalRefresh}
           onUploadClick={() => setCurrentView('settings')}
           onNavigateToSettings={() => setCurrentView('settings')}
@@ -170,6 +214,9 @@ export default function App() {
             <SettingsView
               datasetSummary={datasetSummary}
               onRefreshDataset={handleGlobalRefresh}
+              backendStatus={backendStatus}
+              backendHealthDetails={backendHealthDetails}
+              onRetryHealth={checkHealth}
               isModelTrained={isModelTrained}
               setIsModelTrained={setIsModelTrained}
               trainedMetrics={trainedMetrics}

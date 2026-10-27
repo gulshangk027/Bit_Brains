@@ -46,10 +46,26 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Enable CORS for Vite frontend
+# Configure CORS for Vite frontend and production deployments
+allowed_origins_env = os.environ.get("ALLOWED_ORIGINS", "")
+custom_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+
+default_origins = [
+    "https://bit-brains-liart.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+all_allowed_origins = list(dict.fromkeys(default_origins + custom_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=all_allowed_origins,
+    allow_origin_regex=r"^https:\/\/.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -121,16 +137,19 @@ def root():
         "target_name": TARGET_NAME
     }
 
+@app.get("/health")
 @app.get("/api/health")
 @app.get("/api")
 def api_health():
     """Health check endpoint confirming backend status, active models, and dataset metadata."""
     meta = get_dataset_metadata()
     return {
-        "platform": "MuleNet AI",
         "status": "ONLINE",
+        "healthy": True,
+        "platform": "MuleNet AI",
+        "version": "2.0.0",
         "timestamp": datetime.now().isoformat(),
-        "backend": "FastAPI (Port 8000)",
+        "backend": "FastAPI",
         "dataset": meta.get("filename", "Synthetic Demonstration Data"),
         "records": meta.get("rows", 0),
         "target_variable": TARGET_VARIABLE,
