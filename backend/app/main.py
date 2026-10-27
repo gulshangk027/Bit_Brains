@@ -43,7 +43,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="MuleNet AI API",
     description="Intelligent Mule Account Detection and Financial Fraud Investigation Platform (PS-01)",
-    version="2.0.0"
+    version="2.0.0",
+    redirect_slashes=False
 )
 
 # Configure CORS for Vite frontend and production deployments
@@ -140,6 +141,8 @@ def root():
 @app.get("/health")
 @app.get("/api/health")
 @app.get("/api")
+@app.get("/api/index")
+@app.get("/api/index/health")
 def api_health():
     """Health check endpoint confirming backend status, active models, and dataset metadata."""
     meta = get_dataset_metadata()
