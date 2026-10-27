@@ -121,9 +121,11 @@ export default function SettingsView({
   };
 
   useEffect(() => {
-    fetchModelStatus();
-    fetchFeatureDict();
-  }, []);
+    if (backendStatus === 'online') {
+      fetchModelStatus();
+      fetchFeatureDict();
+    }
+  }, [backendStatus]);
 
   useEffect(() => {
     if (trainedMetrics) setMetrics(trainedMetrics);
@@ -271,8 +273,8 @@ export default function SettingsView({
   const handleFileUpload = async (file, inputElement = null) => {
     if (!file || uploading) return;
 
-    if (backendStatus === 'disconnected') {
-      setUploadError('Backend is currently disconnected. Please enter your deployed backend URL in the Custom API Endpoint Override below, or set VITE_API_URL in your Vercel Project Settings.');
+    if (backendStatus !== 'online') {
+      setUploadError('Backend is not connected. Please enter your deployed backend URL in the Custom API Endpoint Override below, or set VITE_API_URL in your Vercel Project Settings.');
       if (inputElement) inputElement.value = '';
       return;
     }

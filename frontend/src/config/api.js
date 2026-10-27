@@ -43,7 +43,8 @@ export function isBackendConfigured() {
 
   if (import.meta.env.DEV || import.meta.env.MODE === 'development') return true;
 
-  return false;
+  // Active production backend URL is configured by default
+  return true;
 }
 
 export function getApiBaseUrl() {
@@ -62,8 +63,8 @@ export function getApiBaseUrl() {
     return 'http://localhost:8000';
   }
 
-  // 4. In production without VITE_API_URL, return empty string (unconfigured)
-  return '';
+  // 4. Default active production backend endpoint
+  return 'https://mulenet-ai-ps01.loca.lt';
 }
 
 // Retain export for backward compatibility with components importing API_BASE_URL

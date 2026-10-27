@@ -72,10 +72,10 @@ export default function Header({
     const inputEl = e.target;
     if (!file || uploading) return;
 
-    if (backendStatus === 'disconnected') {
+    if (backendStatus !== 'online') {
       setUploadNotice({
         type: 'error',
-        message: 'Backend is currently disconnected. Go to Settings to enter your backend URL or configure VITE_API_URL in Vercel.'
+        message: 'Backend is not connected. Open Settings to connect your backend URL or configure VITE_API_URL in Vercel.'
       });
       setTimeout(() => setUploadNotice(null), 7000);
       if (inputEl) inputEl.value = '';
