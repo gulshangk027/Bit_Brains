@@ -34,6 +34,18 @@ export function setCustomApiUrl(url) {
   }
 }
 
+export function isBackendConfigured() {
+  const custom = getCustomApiUrl();
+  if (custom) return true;
+
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim()) return true;
+
+  if (import.meta.env.DEV || import.meta.env.MODE === 'development') return true;
+
+  return false;
+}
+
 export function getApiBaseUrl() {
   // 1. Runtime user override
   const custom = getCustomApiUrl();
@@ -50,7 +62,7 @@ export function getApiBaseUrl() {
     return 'http://localhost:8000';
   }
 
-  // 4. In production without VITE_API_URL, return empty string for relative proxy
+  // 4. In production without VITE_API_URL, return empty string (unconfigured)
   return '';
 }
 
@@ -90,14 +102,16 @@ export function getApiConfigInfo() {
   const envUrl = (import.meta.env.VITE_API_URL || '').trim();
   const baseUrl = getApiBaseUrl();
   const isDev = Boolean(import.meta.env.DEV || import.meta.env.MODE === 'development');
+  const configured = isBackendConfigured();
 
   return {
-    effectiveUrl: baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'Relative Path'),
+    effectiveUrl: baseUrl || (configured ? 'Relative Path' : 'Not Configured (Requires VITE_API_URL)'),
+    configuredUrl: baseUrl,
     rawBaseUrl: baseUrl,
     customUrl: custom,
     envUrl: envUrl,
     isDev,
-    isConfigured: Boolean(custom || envUrl || isDev)
+    isConfigured: configured
   };
 }
 
@@ -113,6 +127,18 @@ export function getApiConfigInfo() {
  * @returns {Promise<{ ok: boolean, status: 'online'|'disconnected'|'error', data: any, message: string, statusCode: number|null }>}
  */
 export async function checkBackendHealth(timeoutMs = 6000) {
+  // If backend is not configured in production, do not send orphan requests to Vercel's static domain
+  if (!isBackendConfigured()) {
+    return {
+      ok: false,
+      status: 'disconnected',
+      data: null,
+      message: 'Backend URL is not configured. In Vercel, set the VITE_API_URL environment variable to your deployed backend URL.',
+      statusCode: null,
+      notConfigured: true
+    };
+  }
+
   const targetUrl = getApiUrl('/health');
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -135,20 +161,43 @@ export async function checkBackendHealth(timeoutMs = 6000) {
         ok: false,
         status: 'disconnected',
         data: null,
-        message: 'Backend endpoint returned HTML instead of JSON. In production, configure VITE_API_URL with your deployed backend URL.',
+        message: `Endpoint returned HTML instead of JSON. The backend is unreachable at ${targetUrl}. Verify VITE_API_URL points to your deployed backend.`,
+        statusCode: res.status
+      };
+    }
+
+    let rawText = '';
+    try {
+      rawText = await res.text();
+    } catch (readErr) {
+      return {
+        ok: false,
+        status: 'disconnected',
+        data: null,
+        message: `Failed to read health response: ${readErr.message}`,
         statusCode: res.status
       };
     }
 
     let data = null;
     try {
-      data = await res.json();
+      data = JSON.parse(rawText);
     } catch {
+      // If server returned plain text 404 (e.g. Vercel NOT_FOUND)
+      if (res.status === 404) {
+        return {
+          ok: false,
+          status: 'disconnected',
+          data: null,
+          message: `Health route not found (HTTP 404). Verify that VITE_API_URL points to your deployed backend, not the Vercel frontend.`,
+          statusCode: 404
+        };
+      }
       return {
         ok: false,
         status: 'error',
         data: null,
-        message: `Backend returned non-JSON response (HTTP ${res.status}).`,
+        message: `Backend returned non-JSON response (HTTP ${res.status}): ${rawText.slice(0, 100)}`,
         statusCode: res.status
       };
     }

@@ -32,7 +32,8 @@ import {
   getApiConfigInfo, 
   getCustomApiUrl, 
   setCustomApiUrl, 
-  checkBackendHealth 
+  checkBackendHealth,
+  isBackendConfigured
 } from '../config/api';
 
 export default function SettingsView({
@@ -237,10 +238,14 @@ export default function SettingsView({
       data = JSON.parse(rawText);
     } catch (parseErr) {
       const cleaned = rawText.replace(/<[^>]*>/g, '').trim().slice(0, 160);
+      let errMsg = `Server returned non-JSON response (HTTP ${res.status}): ${cleaned || res.statusText || 'Unexpected response format'}`;
+      if (res.status === 404 && (cleaned.includes('NOT_FOUND') || cleaned.includes('could not be found'))) {
+        errMsg = `Backend not reachable at this URL (HTTP 404: Vercel frontend served NOT_FOUND). In production, configure VITE_API_URL in your Vercel Project Settings to your deployed backend URL.`;
+      }
       return {
         ok: false,
         status: res.status,
-        message: `Server returned non-JSON response (HTTP ${res.status}): ${cleaned || res.statusText || 'Unexpected response format'}`
+        message: errMsg
       };
     }
 
@@ -265,6 +270,13 @@ export default function SettingsView({
 
   const handleFileUpload = async (file, inputElement = null) => {
     if (!file || uploading) return;
+
+    if (!isBackendConfigured()) {
+      setUploadError('Backend URL is not configured. Please set the VITE_API_URL environment variable in your Vercel Project Settings to your deployed backend URL (e.g. on Render/Railway), or use the Custom API Endpoint Override below.');
+      if (inputElement) inputElement.value = '';
+      return;
+    }
+
     setUploading(true);
     setUploadError(null);
     setUploadSuccess(null);
@@ -406,22 +418,22 @@ export default function SettingsView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           <div className="p-4 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-1">
             <span className="text-[10px] text-[#5B6B7A] font-bold uppercase">Target Health URL</span>
-            <div className="font-mono font-bold text-[#1565C0] truncate" title={getApiUrl('/health')}>
-              {getApiUrl('/health')}
+            <div className="font-mono font-bold text-[#1565C0] break-all select-all text-xs" title={apiInfo.isConfigured ? getApiUrl('/health') : 'N/A (Unconfigured)'}>
+              {apiInfo.isConfigured ? getApiUrl('/health') : 'None (Unconfigured)'}
             </div>
           </div>
 
           <div className="p-4 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-1">
             <span className="text-[10px] text-[#5B6B7A] font-bold uppercase">Effective Base URL</span>
-            <div className="font-mono font-bold text-[#0F2747] truncate" title={apiInfo.effectiveUrl}>
+            <div className={`font-mono font-bold break-all select-all text-xs ${apiInfo.isConfigured ? 'text-[#0F2747]' : 'text-[#D64545]'}`} title={apiInfo.effectiveUrl}>
               {apiInfo.effectiveUrl}
             </div>
           </div>
 
           <div className="p-4 bg-[#F5F7FA] rounded-xl border border-[#D9E2EC] space-y-1">
             <span className="text-[10px] text-[#5B6B7A] font-bold uppercase">Vercel Env Var (VITE_API_URL)</span>
-            <div className="font-mono font-bold truncate text-[#5B6B7A]" title={apiInfo.envUrl || 'Not configured in Vercel'}>
-              {apiInfo.envUrl ? apiInfo.envUrl : 'Not set (defaults to relative)'}
+            <div className={`font-mono font-bold break-all select-all text-xs ${apiInfo.envUrl ? 'text-[#168A5B]' : 'text-[#D64545]'}`} title={apiInfo.envUrl || 'Not configured in Vercel'}>
+              {apiInfo.envUrl ? apiInfo.envUrl : 'Not set in Vercel (Action Required)'}
             </div>
           </div>
 

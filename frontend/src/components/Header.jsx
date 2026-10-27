@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   FileSpreadsheet
 } from 'lucide-react';
-import { getApiUrl, API_BASE_URL } from '../config/api';
+import { getApiUrl, API_BASE_URL, isBackendConfigured } from '../config/api';
 
 export default function Header({ 
   datasetSummary, 
@@ -47,7 +47,11 @@ export default function Header({
       data = JSON.parse(rawText);
     } catch (parseErr) {
       const cleaned = rawText.replace(/<[^>]*>/g, '').trim().slice(0, 160);
-      return { ok: false, status: res.status, message: `Server returned non-JSON (HTTP ${res.status}): ${cleaned || 'Unexpected format'}` };
+      let errMsg = `Server returned non-JSON (HTTP ${res.status}): ${cleaned || 'Unexpected format'}`;
+      if (res.status === 404 && (cleaned.includes('NOT_FOUND') || cleaned.includes('could not be found'))) {
+        errMsg = `Backend not reachable at this URL (HTTP 404: Vercel frontend served NOT_FOUND). In production, configure VITE_API_URL in your Vercel Project Settings to your deployed backend URL.`;
+      }
+      return { ok: false, status: res.status, message: errMsg };
     }
 
     let msg = data.message;
@@ -67,6 +71,16 @@ export default function Header({
     const file = e.target.files[0];
     const inputEl = e.target;
     if (!file || uploading) return;
+
+    if (!isBackendConfigured()) {
+      setUploadNotice({
+        type: 'error',
+        message: 'Backend URL not configured. Set VITE_API_URL in Vercel to your deployed backend.'
+      });
+      setTimeout(() => setUploadNotice(null), 6000);
+      if (inputEl) inputEl.value = '';
+      return;
+    }
 
     setUploading(true);
     setUploadNotice(null);
