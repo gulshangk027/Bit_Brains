@@ -135,7 +135,8 @@ export async function checkBackendHealth(timeoutMs = 6000) {
     const res = await fetch(targetUrl, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Bypass-Tunnel-Reminder': 'true'
       },
       signal: controller.signal
     });
