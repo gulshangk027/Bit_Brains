@@ -147,23 +147,23 @@ export default function Header({
 
         {effectiveStatus === 'error' && (
           <button 
-            onClick={handleRetry}
+            onClick={onNavigateToSettings || handleRetry}
             className="flex items-center gap-1.5 bg-[#FEF2F2] hover:bg-[#FEE2E2] px-3 py-1.5 rounded-lg border border-[#F87171] text-[#D64545] font-bold transition cursor-pointer"
-            title={backendHealthDetails?.message || `Backend error. Click to retry health check to ${getApiUrl('/health')}`}
+            title={backendHealthDetails?.message || `Backend error. Click to configure in Settings.`}
           >
             <span className="w-2 h-2 rounded-full bg-[#D64545]"></span>
-            <span>Backend: Error (Retry)</span>
+            <span>Backend: Error (Configure)</span>
           </button>
         )}
 
         {effectiveStatus === 'disconnected' && (
           <button 
-            onClick={handleRetry}
-            className="flex items-center gap-1.5 bg-[#FEF2F2] hover:bg-[#FEE2E2] px-3 py-1.5 rounded-lg border border-[#F87171] text-[#D64545] font-bold transition cursor-pointer"
-            title={backendHealthDetails?.message || `Backend unreachable at ${resolvedBaseUrl}. Click to retry health check.`}
+            onClick={onNavigateToSettings || handleRetry}
+            className="flex items-center gap-1.5 bg-[#FFFBEB] hover:bg-[#FEF3C7] px-3 py-1.5 rounded-lg border border-[#FDE68A] text-[#B45309] font-bold transition cursor-pointer"
+            title={backendHealthDetails?.message || `Backend disconnected. Click to configure API endpoint in Settings.`}
           >
-            <span className="w-2 h-2 rounded-full bg-[#D64545] animate-ping"></span>
-            <span>Backend: Disconnected (Retry)</span>
+            <span className="w-2 h-2 rounded-full bg-[#D97706] animate-pulse"></span>
+            <span>Backend: Disconnected (Configure)</span>
           </button>
         )}
 

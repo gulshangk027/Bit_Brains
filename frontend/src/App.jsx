@@ -176,6 +176,24 @@ export default function App() {
           noticeMessage={noticeMessage}
         />
 
+        {/* Quick Connection Banner when backend is disconnected */}
+        {backendStatus === 'disconnected' && (
+          <div className="bg-[#FFFBEB] border-b border-[#FDE68A] px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs text-[#92400E]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#D97706] animate-pulse shrink-0"></span>
+              <span>
+                <strong>Backend Disconnected:</strong> The Python ML backend is not yet connected to this Vercel deployment. Enter your backend URL in Settings or set <code className="bg-[#FEF3C7] px-1 py-0.5 rounded font-mono font-bold">VITE_API_URL</code> in Vercel.
+              </span>
+            </div>
+            <button
+              onClick={() => setCurrentView('settings')}
+              className="px-3 py-1 bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-md shadow-2xs transition cursor-pointer shrink-0"
+            >
+              Configure in Settings &rarr;
+            </button>
+          </div>
+        )}
+
         {/* View Switcher */}
         <main className="flex-1 overflow-y-auto">
           {currentView === 'overview' && (
