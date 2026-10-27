@@ -94,5 +94,36 @@ Frontend web application runs at `http://localhost:5173`.
 
 ---
 
+## 🌐 Production Deployment Guide
+
+### Architecture Overview
+In production, MuleNet AI runs as a decoupled or unified full-stack architecture:
+- **Frontend**: Hosted on [Vercel](https://bit-brains-liart.vercel.app/) (Vite + React SPA).
+- **Backend**: Python FastAPI with XGBoost, SHAP, and in-memory analytics engine.
+
+### Connecting Frontend to Backend
+1. **Set `VITE_API_URL` in Vercel**:
+   - Go to **Vercel Dashboard** → Your Project (`bit-brains-liart`) → **Settings** → **Environment Variables**.
+   - Add:
+     - **Key**: `VITE_API_URL`
+     - **Value**: `https://<your-backend-url>` (e.g., `https://mulenet-ai-backend.onrender.com` or your cloud API URL).
+   - Go to **Deployments** → Click **Redeploy** on the latest commit.
+
+2. **Deploying Backend on Render (Free / 1-Click)**:
+   - A pre-configured `render.yaml` and `Procfile` are included in the repository.
+   - In [Render Dashboard](https://dashboard.render.com), click **New Web Service** and select this GitHub repository.
+   - Configuration:
+     - **Root Directory**: `backend`
+     - **Build Command**: `pip install -r requirements.txt`
+     - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - Copy the deployed service URL and set it as `VITE_API_URL` in Vercel.
+
+3. **Runtime API Endpoint Override (No Redeploy Required)**:
+   - Open MuleNet AI in the browser → Navigate to **Settings** (`⚙️`).
+   - In the **Backend Connection & Service Health** card, enter your backend URL in the **Custom API Endpoint Override** field.
+   - Click **Apply & Save** to connect instantly.
+
+---
+
 ## 👥 Team
 **Bit Brains** — Cyber Hackathon 2026 (PS-01)
