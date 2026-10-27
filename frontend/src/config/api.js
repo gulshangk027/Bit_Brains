@@ -127,18 +127,6 @@ export function getApiConfigInfo() {
  * @returns {Promise<{ ok: boolean, status: 'online'|'disconnected'|'error', data: any, message: string, statusCode: number|null }>}
  */
 export async function checkBackendHealth(timeoutMs = 6000) {
-  // If backend is not configured in production, do not send orphan requests to Vercel's static domain
-  if (!isBackendConfigured()) {
-    return {
-      ok: false,
-      status: 'disconnected',
-      data: null,
-      message: 'Backend URL is not configured. In Vercel, set the VITE_API_URL environment variable to your deployed backend URL.',
-      statusCode: null,
-      notConfigured: true
-    };
-  }
-
   const targetUrl = getApiUrl('/health');
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -157,11 +145,12 @@ export async function checkBackendHealth(timeoutMs = 6000) {
 
     // If server returned HTML (such as Vercel index.html fallback rewrite)
     if (contentType.includes('text/html')) {
+      const displayUrl = targetUrl.startsWith('http') ? targetUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}${targetUrl}`;
       return {
         ok: false,
         status: 'disconnected',
         data: null,
-        message: `Endpoint returned HTML instead of JSON. The backend is unreachable at ${targetUrl}. Verify VITE_API_URL points to your deployed backend.`,
+        message: `Endpoint returned HTML instead of JSON. Backend service is not active at ${displayUrl}. Set VITE_API_URL in Vercel to point to your deployed backend.`,
         statusCode: res.status
       };
     }
@@ -185,11 +174,12 @@ export async function checkBackendHealth(timeoutMs = 6000) {
     } catch {
       // If server returned plain text 404 (e.g. Vercel NOT_FOUND)
       if (res.status === 404) {
+        const displayUrl = targetUrl.startsWith('http') ? targetUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}${targetUrl}`;
         return {
           ok: false,
           status: 'disconnected',
           data: null,
-          message: `Health route not found (HTTP 404). Verify that VITE_API_URL points to your deployed backend, not the Vercel frontend.`,
+          message: `Health route returned HTTP 404. No backend service is answering at ${displayUrl}. Deploy backend to Render/Railway and set VITE_API_URL in Vercel, or set custom URL in Settings.`,
           statusCode: 404
         };
       }

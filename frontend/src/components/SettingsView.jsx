@@ -271,8 +271,8 @@ export default function SettingsView({
   const handleFileUpload = async (file, inputElement = null) => {
     if (!file || uploading) return;
 
-    if (!isBackendConfigured()) {
-      setUploadError('Backend URL is not configured. Please set the VITE_API_URL environment variable in your Vercel Project Settings to your deployed backend URL (e.g. on Render/Railway), or use the Custom API Endpoint Override below.');
+    if (backendStatus === 'disconnected') {
+      setUploadError('Backend is currently disconnected. Please enter your deployed backend URL in the Custom API Endpoint Override below, or set VITE_API_URL in your Vercel Project Settings.');
       if (inputElement) inputElement.value = '';
       return;
     }

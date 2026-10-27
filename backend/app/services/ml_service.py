@@ -32,7 +32,14 @@ logger = logging.getLogger(__name__)
 
 # Model Persistence Directories
 MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
-os.makedirs(MODEL_DIR, exist_ok=True)
+try:
+    os.makedirs(MODEL_DIR, exist_ok=True)
+except Exception:
+    MODEL_DIR = os.path.join("/tmp", "models")
+    try:
+        os.makedirs(MODEL_DIR, exist_ok=True)
+    except Exception:
+        pass
 MODEL_FILE = os.path.join(MODEL_DIR, "dristhi_active_model.joblib")
 METRICS_FILE = os.path.join(MODEL_DIR, "dristhi_metrics.json")
 
